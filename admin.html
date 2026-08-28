@@ -179,7 +179,7 @@
 <script>
   // ---- CHANGE THIS: paste your own SHA-256 password hash here ----
   // Generate one with generate-hash.html, then replace the value below.
-  const ADMIN_PASSWORD_HASH = "REPLACE_WITH_YOUR_OWN_SHA256_HASH";
+  const ADMIN_PASSWORD_HASH = "0ef3c69112bbda9bbdf5bc753d18f4ace34cb83ff792bd952eb2b90d8bfb74f0";
 
   async function sha256Hex(str) {
     const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
