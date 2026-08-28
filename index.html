@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Åpen Hall – Bákthárji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #111111;
+    --muted: #5a5a5a;
+    --green: #167a3c;
+    --red: #c22a1e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121212;
+      --text: #f5f5f5;
+      --muted: #b5b5b5;
+      --green: #4fd07a;
+      --red: #ff6a5c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+  }
+  body {
+    font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+  .poster {
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+  }
+  h1.title {
+    font-weight: 800;
+    font-size: clamp(34px, 10vw, 46px);
+    margin: 0;
+    line-height: 1.05;
+  }
+  .place {
+    font-weight: 400;
+    font-size: clamp(26px, 7.5vw, 36px);
+    margin: 2px 0 0;
+    line-height: 1.1;
+  }
+  .when-block { margin-top: 34px; }
+  .weekday, .date {
+    font-weight: 800;
+    font-size: clamp(30px, 9vw, 42px);
+    margin: 0;
+    line-height: 1.12;
+  }
+  .time {
+    font-weight: 400;
+    font-size: clamp(22px, 6.5vw, 30px);
+    margin: 4px 0 0;
+  }
+  .status-block { margin-top: 30px; }
+  .status-word {
+    font-weight: 800;
+    font-size: clamp(38px, 12vw, 54px);
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.05;
+  }
+  .status-word.open { color: var(--green); }
+  .status-word.closed { color: var(--red); }
+  .status-reason {
+    margin: 6px 0 0;
+    font-size: clamp(15px, 4vw, 18px);
+    font-weight: 500;
+    color: var(--text);
+  }
+  .status-reason:empty { display: none; }
+  .logos {
+    margin-top: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    flex-wrap: wrap;
+  }
+  .logos img { height: 60px; width: auto; display: block; }
+  .updated {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <div class="poster">
+    <h1 class="title">Åpen Hall</h1>
+    <p class="place">Bákthárji</p>
+
+    <div class="when-block">
+      <p class="weekday" id="weekday">…</p>
+      <p class="date" id="date"></p>
+      <p class="time" id="time"></p>
+    </div>
+
+    <div class="status-block">
+      <p class="status-word" id="status-word">Laster…</p>
+      <p class="status-reason" id="status-reason"></p>
+    </div>
+
+    <div class="logos">
+      <img src="assets/kautokeino-il.png" alt="Kautokeino I.L.">
+      <img src="assets/kautokeino-kommune.png" alt="Guovdageainnu suohkan – Kautokeino kommune">
+    </div>
+
+    <p class="updated" id="updated"></p>
+  </div>
+
+<script>
+  const DEFAULT_TIME_START = "18:00";
+  const DEFAULT_TIME_END = "23:00";
+
+  // ---- Compute the upcoming Friday (the one this page is about) ----
+  function getUpcomingFriday(now) {
+    const day = now.getDay(); // 0 = Sun ... 5 = Fri, 6 = Sat
+    let daysUntilFriday = (5 - day + 7) % 7;
+    if (day === 5) {
+      // It's already Friday: keep showing today until the event ends at 23:00.
+      daysUntilFriday = now.getHours() < 23 ? 0 : 7;
+    }
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    target.setDate(target.getDate() + daysUntilFriday);
+    return target;
+  }
+
+  function isoDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function capitalize(s) {
+    return s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  const now = new Date();
+  const upcomingFriday = getUpcomingFriday(now);
+  const upcomingFridayISO = isoDate(upcomingFriday);
+
+  document.getElementById("weekday").textContent = capitalize(
+    new Intl.DateTimeFormat("nb-NO", { weekday: "long" }).format(upcomingFriday)
+  );
+  document.getElementById("date").textContent = new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "long",
+  }).format(upcomingFriday);
+
+  const wordEl = document.getElementById("status-word");
+  const reasonEl = document.getElementById("status-reason");
+  const timeEl = document.getElementById("time");
+  const updatedEl = document.getElementById("updated");
+
+  function setTime(start, end) {
+    timeEl.textContent = `Kl. ${start || DEFAULT_TIME_START}–${end || DEFAULT_TIME_END}`;
+  }
+
+  function renderDefault() {
+    wordEl.textContent = "Åpen";
+    wordEl.className = "status-word open";
+    reasonEl.textContent = "";
+    setTime(DEFAULT_TIME_START, DEFAULT_TIME_END);
+  }
+
+  function render(data) {
+    // Only trust the stored status/time if it was actually set for THIS upcoming Friday.
+    // Otherwise leftovers from a previous week would show forever.
+    if (!data || data.weekOf !== upcomingFridayISO) {
+      renderDefault();
+      updatedEl.textContent = "";
+      return;
+    }
+
+    setTime(data.timeStart, data.timeEnd);
+
+    if (data.status === "innstilt") {
+      wordEl.textContent = "Innstilt";
+      wordEl.className = "status-word closed";
+      reasonEl.textContent = data.reason ? data.reason : "";
+    } else if (data.status === "stengt") {
+      wordEl.textContent = "Stengt";
+      wordEl.className = "status-word closed";
+      reasonEl.textContent = data.reason ? data.reason : "";
+    } else {
+      wordEl.textContent = "Åpen";
+      wordEl.className = "status-word open";
+      reasonEl.textContent = "";
+    }
+
+    if (data.updatedAt) {
+      try {
+        const dt = new Date(data.updatedAt);
+        updatedEl.textContent = "Oppdatert " + dt.toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" });
+      } catch (e) {
+        updatedEl.textContent = "";
+      }
+    }
+  }
+
+  renderDefault();
+  fetch("status.json?_=" + Date.now(), { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then(render)
+    .catch(() => renderDefault());
+</script>
+</body>
+</html>

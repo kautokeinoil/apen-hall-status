@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin – Åpen Hall status</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --card-bg: #ffffff;
+    --text: #1c1c1c;
+    --muted: #6b6b6b;
+    --border: #e4e1d8;
+    --green: #1c7a34;
+    --red: #b3261e;
+    --accent: #1a5276;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181a;
+      --card-bg: #232427;
+      --text: #f1efe9;
+      --muted: #a7a49c;
+      --border: #34363a;
+      --green: #4ade80;
+      --red: #ff6b60;
+      --accent: #7fb6e0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 16px 0 6px;
+  }
+  input[type=password], input[type=text], textarea, select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  button {
+    margin-top: 20px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .status-choices { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .status-choices label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .status-choices input { width: auto; }
+  #reasonWrap { margin-top: 8px; display: none; }
+  #msg { margin-top: 16px; font-size: 14px; white-space: pre-wrap; }
+  #msg.ok { color: var(--green); }
+  #msg.err { color: var(--red); }
+  fieldset { border: none; padding: 0; margin: 0; }
+  details { margin-top: 22px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  .current {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div id="lockScreen">
+    <h1>Åpen Hall – admin</h1>
+    <p class="sub">Skriv inn passord for å endre status.</p>
+    <label for="pw">Passord</label>
+    <input type="password" id="pw" autocomplete="current-password">
+    <button id="unlockBtn">Lås opp</button>
+    <p id="lockMsg" class="hint"></p>
+  </div>
+
+  <div id="panel" style="display:none">
+    <h1>Åpen Hall – admin</h1>
+    <p class="sub">Sett status for kommende fredag.</p>
+    <p class="current" id="currentInfo">Laster nåværende status …</p>
+
+    <fieldset>
+      <label>Status</label>
+      <div class="status-choices">
+        <label><input type="radio" name="status" value="open" checked> Åpen</label>
+        <label><input type="radio" name="status" value="innstilt"> Innstilt (skriv årsak)</label>
+        <label><input type="radio" name="status" value="stengt"> Stengt (skriv årsak)</label>
+      </div>
+      <div id="reasonWrap">
+        <label for="reason">Årsak</label>
+        <textarea id="reason" placeholder="F.eks. «Ingen ledige folk denne uka» eller «Stengt pga. helligdag»"></textarea>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <label>Tidspunkt (standard er 18:00–23:00)</label>
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1">
+          <input type="time" id="timeStart" value="18:00">
+        </div>
+        <div style="flex:1">
+          <input type="time" id="timeEnd" value="23:00">
+        </div>
+      </div>
+      <p class="hint">Trenger dere bare å endre dette hvis kommende fredag har et avvikende tidspunkt.</p>
+    </fieldset>
+
+    <button id="saveBtn">Lagre status</button>
+    <p id="msg"></p>
+
+    <details>
+      <summary>Oppsett (GitHub-repo og tilgangsnøkkel)</summary>
+      <label for="owner">GitHub-brukernavn/organisasjon</label>
+      <input type="text" id="owner" placeholder="f.eks. forestpeople-kautokeino">
+      <label for="repo">Repo-navn</label>
+      <input type="text" id="repo" placeholder="f.eks. apen-hall-status">
+      <label for="branch">Branch</label>
+      <input type="text" id="branch" value="main">
+      <label for="token">GitHub Personal Access Token</label>
+      <input type="password" id="token" placeholder="ghp_... eller fine-grained token">
+      <p class="hint">Trenger «Contents: Read and write» på dette repoet. Lagres kun i denne nettleseren.</p>
+      <button class="secondary" id="saveConfigBtn" type="button">Lagre oppsett</button>
+    </details>
+  </div>
+
+</div>
+
+<script>
+  // ---- CHANGE THIS: paste your own SHA-256 password hash here ----
+  // Generate one with generate-hash.html, then replace the value below.
+  const ADMIN_PASSWORD_HASH = "REPLACE_WITH_YOUR_OWN_SHA256_HASH";
+
+  async function sha256Hex(str) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function getUpcomingFriday(now) {
+    const day = now.getDay();
+    let daysUntilFriday = (5 - day + 7) % 7;
+    if (day === 5) {
+      daysUntilFriday = now.getHours() < 23 ? 0 : 7;
+    }
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    target.setDate(target.getDate() + daysUntilFriday);
+    return target;
+  }
+  function isoDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  const lockScreen = document.getElementById("lockScreen");
+  const panel = document.getElementById("panel");
+  const pwInput = document.getElementById("pw");
+  const lockMsg = document.getElementById("lockMsg");
+
+  document.getElementById("unlockBtn").addEventListener("click", async () => {
+    const hash = await sha256Hex(pwInput.value || "");
+    if (ADMIN_PASSWORD_HASH === "REPLACE_WITH_YOUR_OWN_SHA256_HASH") {
+      lockMsg.textContent = "Adminsiden er ikke satt opp ennå: sett ADMIN_PASSWORD_HASH i admin.html. Se README.";
+      return;
+    }
+    if (hash === ADMIN_PASSWORD_HASH) {
+      lockScreen.style.display = "none";
+      panel.style.display = "block";
+      initPanel();
+    } else {
+      lockMsg.textContent = "Feil passord.";
+    }
+  });
+  pwInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("unlockBtn").click();
+  });
+
+  // ---- Config (owner/repo/branch/token) stored in this browser only ----
+  const CFG_KEY = "apenhall_admin_cfg_v1";
+  function loadCfg() {
+    try { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); } catch (e) { return {}; }
+  }
+  function saveCfg(cfg) {
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  }
+
+  function initPanel() {
+    const cfg = loadCfg();
+    document.getElementById("owner").value = cfg.owner || "";
+    document.getElementById("repo").value = cfg.repo || "";
+    document.getElementById("branch").value = cfg.branch || "main";
+    document.getElementById("token").value = cfg.token || "";
+
+    document.getElementById("saveConfigBtn").addEventListener("click", () => {
+      const newCfg = {
+        owner: document.getElementById("owner").value.trim(),
+        repo: document.getElementById("repo").value.trim(),
+        branch: document.getElementById("branch").value.trim() || "main",
+        token: document.getElementById("token").value.trim(),
+      };
+      saveCfg(newCfg);
+      msgEl.textContent = "Oppsett lagret i denne nettleseren.";
+      msgEl.className = "ok";
+      loadCurrentStatus();
+    });
+
+    document.querySelectorAll('input[name="status"]').forEach((el) => {
+      el.addEventListener("change", updateReasonVisibility);
+    });
+    updateReasonVisibility();
+
+    document.getElementById("saveBtn").addEventListener("click", saveStatus);
+
+    loadCurrentStatus();
+  }
+
+  function updateReasonVisibility() {
+    const val = document.querySelector('input[name="status"]:checked').value;
+    document.getElementById("reasonWrap").style.display = val === "open" ? "none" : "block";
+  }
+
+  const msgEl = document.getElementById("msg");
+  const currentInfo = document.getElementById("currentInfo");
+
+  function apiUrl(cfg) {
+    return `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/status.json`;
+  }
+
+  async function loadCurrentStatus() {
+    const cfg = loadCfg();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      currentInfo.textContent = "Fyll inn oppsett (GitHub-brukernavn, repo, token) nedenfor først.";
+      return;
+    }
+    try {
+      const res = await fetch(`${apiUrl(cfg)}?ref=${encodeURIComponent(cfg.branch)}`, {
+        headers: {
+          Authorization: `Bearer ${cfg.token}`,
+          Accept: "application/vnd.github+json",
+        },
+      });
+      if (res.status === 404) {
+        currentInfo.textContent = "Ingen status.json funnet ennå – den opprettes når du lagrer første gang.";
+        return;
+      }
+      if (!res.ok) {
+        currentInfo.textContent = `Kunne ikke hente nåværende status (${res.status}). Sjekk oppsettet.`;
+        return;
+      }
+      const json = await res.json();
+      const decoded = JSON.parse(decodeURIComponent(escape(atob(json.content))));
+      const upcomingISO = isoDate(getUpcomingFriday(new Date()));
+      const timeStartEl = document.getElementById("timeStart");
+      const timeEndEl = document.getElementById("timeEnd");
+      if (decoded.weekOf === upcomingISO) {
+        const timeStr = `${decoded.timeStart || "18:00"}–${decoded.timeEnd || "23:00"}`;
+        currentInfo.textContent = `Lagret status for kommende fredag (${decoded.weekOf}), kl. ${timeStr}: ${decoded.status}${decoded.reason ? " – " + decoded.reason : ""}`;
+        timeStartEl.value = decoded.timeStart || "18:00";
+        timeEndEl.value = decoded.timeEnd || "23:00";
+        const radio = document.querySelector(`input[name="status"][value="${decoded.status}"]`);
+        if (radio) radio.checked = true;
+        document.getElementById("reason").value = decoded.reason || "";
+        updateReasonVisibility();
+      } else {
+        currentInfo.textContent = `Ingen status lagret for kommende fredag ennå (viser "Åpen" kl. 18:00–23:00 som standard). Forrige lagrede uke: ${decoded.weekOf || "–"}.`;
+        timeStartEl.value = "18:00";
+        timeEndEl.value = "23:00";
+      }
+    } catch (e) {
+      currentInfo.textContent = "Kunne ikke hente nåværende status: " + e.message;
+    }
+  }
+
+  async function saveStatus() {
+    const cfg = loadCfg();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      msgEl.textContent = "Fyll inn oppsett (GitHub-brukernavn, repo, token) under «Oppsett» først.";
+      msgEl.className = "err";
+      return;
+    }
+    const status = document.querySelector('input[name="status"]:checked').value;
+    const reason = document.getElementById("reason").value.trim();
+    const timeStart = document.getElementById("timeStart").value || "18:00";
+    const timeEnd = document.getElementById("timeEnd").value || "23:00";
+    const upcomingISO = isoDate(getUpcomingFriday(new Date()));
+
+    const data = {
+      status,
+      reason: status === "open" ? "" : reason,
+      weekOf: upcomingISO,
+      timeStart,
+      timeEnd,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const saveBtn = document.getElementById("saveBtn");
+    saveBtn.disabled = true;
+    msgEl.textContent = "Lagrer …";
+    msgEl.className = "";
+
+    try {
+      // Need current sha to update an existing file.
+      let sha;
+      const getRes = await fetch(`${apiUrl(cfg)}?ref=${encodeURIComponent(cfg.branch)}`, {
+        headers: { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github+json" },
+      });
+      if (getRes.ok) {
+        const getJson = await getRes.json();
+        sha = getJson.sha;
+      } else if (getRes.status !== 404) {
+        throw new Error(`Kunne ikke lese eksisterende fil (${getRes.status})`);
+      }
+
+      const contentB64 = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + "\n")));
+      const body = {
+        message: `Oppdater status: ${status} for uke ${upcomingISO}`,
+        content: contentB64,
+        branch: cfg.branch,
+      };
+      if (sha) body.sha = sha;
+
+      const putRes = await fetch(apiUrl(cfg), {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${cfg.token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!putRes.ok) {
+        const errJson = await putRes.json().catch(() => ({}));
+        throw new Error(errJson.message || `Lagring feilet (${putRes.status})`);
+      }
+
+      msgEl.textContent = "Status lagret! Det kan ta noen sekunder før den vises på forsiden.";
+      msgEl.className = "ok";
+      loadCurrentStatus();
+    } catch (e) {
+      msgEl.textContent = "Feil: " + e.message;
+      msgEl.className = "err";
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
